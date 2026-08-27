@@ -1,0 +1,25 @@
+@{ ViewData["Title"] = "Bảng điều khiển"; var d = (HrDash)ViewBag.Dash; }
+<div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted small">Nhân sự đang làm</div><div class="stat-num" style="color:#2563eb">@d.Headcount</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted small">Đang nghỉ</div><div class="stat-num text-warning">@d.OnLeave</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted small">Đơn phép chờ duyệt</div><div class="stat-num">@d.PendingLeaves</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><div class="text-muted small">Quỹ lương kỳ gần nhất</div><div class="stat-num" style="font-size:18px">@d.PayrollMonth.ToString("N0")đ</div></div></div></div>
+</div>
+<div class="row g-3">
+    <div class="col-lg-7"><div class="card"><div class="card-body">
+        <h6 class="fw-bold mb-3">Nhân sự theo phòng ban</h6>
+        @foreach (var (dept, c) in d.ByDept)
+        {
+            var pct = d.Headcount == 0 ? 0 : c * 100 / d.Headcount;
+            <div class="mb-2"><div class="d-flex justify-content-between small"><span>@dept</span><span class="text-muted">@c</span></div>
+                <div class="progress" style="height:7px"><div class="progress-bar" style="width:@pct%;background:#2563eb"></div></div></div>
+        }
+        @if (d.ByDept.Count == 0) { <div class="text-muted">Chưa có nhân viên.</div> }
+    </div></div></div>
+    <div class="col-lg-5"><div class="card"><div class="card-body">
+        <h6 class="fw-bold mb-2">Tác vụ</h6>
+        <a href="/Employee/Create" class="btn btn-primary w-100 mb-2"><i class="bi bi-person-plus me-1"></i>Thêm nhân viên</a>
+        <a href="/Leave?status=0" class="btn btn-outline-primary w-100 mb-2">Duyệt nghỉ phép (@d.PendingLeaves)</a>
+        <a href="/Payroll" class="btn btn-outline-primary w-100">Tính bảng lương</a>
+    </div></div></div>
+</div>

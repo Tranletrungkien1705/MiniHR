@@ -1,0 +1,18 @@
+@{ ViewData["Title"] = "Thêm nhân viên"; var depts = (List<Department>)ViewBag.Depts; }
+<div class="card" style="max-width:700px"><div class="card-body">
+    <form asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+        <div class="row g-3">
+            <div class="col-md-6"><label class="form-label small text-muted">Họ tên *</label><input name="fullName" class="form-control" required /></div>
+            <div class="col-md-3"><label class="form-label small text-muted">Mã (tự sinh)</label><input name="code" class="form-control" /></div>
+            <div class="col-md-3"><label class="form-label small text-muted">Ngày vào</label><input name="joinDate" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control" /></div>
+            <div class="col-md-6"><label class="form-label small text-muted">Chức danh</label><input name="position" class="form-control" /></div>
+            <div class="col-md-6"><label class="form-label small text-muted">Phòng ban</label>
+                <select name="departmentId" class="form-select"><option value="">—</option>@foreach (var d in depts) { <option value="@d.Id">@d.Name</option> }</select></div>
+            <div class="col-md-4"><label class="form-label small text-muted">SĐT</label><input name="phone" class="form-control" /></div>
+            <div class="col-md-4"><label class="form-label small text-muted">Email</label><input name="email" type="email" class="form-control" /></div>
+            <div class="col-md-4"><label class="form-label small text-muted">Lương cơ bản</label><input name="baseSalary" type="number" step="500000" class="form-control" /></div>
+        </div>
+        <div class="mt-3"><button class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Lưu</button> <a href="/Employee" class="btn btn-outline-secondary">Hủy</a></div>
+    </form>
+</div></div>

@@ -1,0 +1,35 @@
+@model List<LeaveRequest>
+@{ ViewData["Title"] = "Nghỉ phép"; var st = (int?)ViewBag.Status; }
+<div class="card"><div class="card-body">
+    <div class="mb-3 d-flex gap-2">
+        <a href="/Leave" class="btn btn-sm @(st==null?"btn-primary":"btn-outline-primary")">Tất cả</a>
+        <a href="/Leave?status=0" class="btn btn-sm @(st==0?"btn-primary":"btn-outline-primary")">Chờ duyệt</a>
+        <a href="/Leave?status=1" class="btn btn-sm @(st==1?"btn-primary":"btn-outline-primary")">Đã duyệt</a>
+        <a href="/Leave?status=2" class="btn btn-sm @(st==2?"btn-primary":"btn-outline-primary")">Từ chối</a>
+    </div>
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Nhân viên</th><th>Loại</th><th>Từ – đến</th><th class="text-center">Ngày</th><th>Lý do</th><th>Trạng thái</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var l in Model)
+        {
+            var (t, css) = Ui.LeaveSt(l.Status);
+            <tr>
+                <td class="fw-semibold">@l.Employee?.FullName<div class="small text-muted">@l.Employee?.Code</div></td>
+                <td class="small">@Ui.Leave(l.Type)</td>
+                <td class="small">@l.FromDate.ToString("dd/MM/yy") – @l.ToDate.ToString("dd/MM/yy")</td>
+                <td class="text-center">@l.Days</td>
+                <td class="small text-muted">@l.Reason</td>
+                <td><span class="badge bg-@css">@t</span></td>
+                <td class="text-end">
+                    @if (l.Status == LeaveStatus.Pending)
+                    {
+                        <form asp-action="Act" method="post" class="d-inline">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@l.Id" /><input type="hidden" name="approve" value="true" /><button class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i></button></form>
+                        <form asp-action="Act" method="post" class="d-inline">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@l.Id" /><input type="hidden" name="approve" value="false" /><button class="btn btn-sm btn-outline-danger"><i class="bi bi-x-lg"></i></button></form>
+                    }
+                </td>
+            </tr>
+        }
+        @if (Model.Count == 0) { <tr><td colspan="7" class="text-center text-muted py-4">Không có đơn.</td></tr> }
+        </tbody>
+    </table>
+</div></div>

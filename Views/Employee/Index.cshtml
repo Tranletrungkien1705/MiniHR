@@ -1,0 +1,30 @@
+@model List<Employee>
+@{ ViewData["Title"] = "Nhân viên"; var depts = (List<Department>)ViewBag.Depts; var gid = (int?)ViewBag.DeptId; }
+<div class="card"><div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <form method="get" class="d-flex gap-2">
+            <input name="q" value="@ViewBag.Q" class="form-control form-control-sm" placeholder="Tên / mã / SĐT..." style="max-width:200px" />
+            <select name="deptId" class="form-select form-select-sm" onchange="this.form.submit()" style="max-width:160px">
+                <option value="">— Mọi phòng ban —</option>
+                @foreach (var dp in depts) { <option value="@dp.Id" selected="@(gid==dp.Id)">@dp.Name</option> }
+            </select>
+            <button class="btn btn-sm btn-primary">Lọc</button>
+        </form>
+        <a href="/Employee/Create" class="btn btn-sm btn-primary"><i class="bi bi-person-plus me-1"></i>Thêm</a>
+    </div>
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Mã</th><th>Họ tên</th><th>Chức danh</th><th>Phòng ban</th><th class="text-end">Lương CB</th><th>Trạng thái</th></tr></thead>
+        <tbody>
+        @foreach (var e in Model)
+        {
+            var (t, css) = Ui.Emp(e.Status);
+            <tr style="cursor:pointer" onclick="location.href='/Employee/Detail/@e.Id'">
+                <td class="fw-semibold">@e.Code</td><td>@e.FullName</td><td class="small">@e.Position</td>
+                <td class="small text-muted">@(e.Department?.Name ?? "—")</td><td class="text-end">@e.BaseSalary.ToString("N0")</td>
+                <td><span class="badge bg-@css">@t</span></td>
+            </tr>
+        }
+        @if (Model.Count == 0) { <tr><td colspan="6" class="text-center text-muted py-4">Không có nhân viên.</td></tr> }
+        </tbody>
+    </table>
+</div></div>

@@ -1,0 +1,42 @@
+@model Employee
+@{ ViewData["Title"] = $"NV {Model.Code}"; var (st, css) = Ui.Emp(Model.Status); }
+<div class="row g-3">
+    <div class="col-lg-7"><div class="card"><div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+                <h5 class="fw-bold mb-1">@Model.FullName <span class="badge bg-@css ms-1">@st</span></h5>
+                <div class="text-muted small">@Model.Code · @Model.Position · @(Model.Department?.Name ?? "—")</div>
+            </div>
+        </div>
+        <div class="row g-2 small">
+            <div class="col-6">SĐT: <b>@Model.Phone</b></div>
+            <div class="col-6">Email: <b>@Model.Email</b></div>
+            <div class="col-6">Ngày vào: <b>@Model.JoinDate.ToString("dd/MM/yyyy")</b></div>
+            <div class="col-6">Lương CB: <b>@Model.BaseSalary.ToString("N0")đ</b></div>
+            <div class="col-6">Phép năm còn: <b>@Model.AnnualLeaveDays ngày</b></div>
+        </div>
+        <hr />
+        <h6 class="fw-bold mb-2">Lịch sử nghỉ phép</h6>
+        <table class="table table-sm align-middle"><tbody>
+        @foreach (var l in Model.Leaves.OrderByDescending(x => x.CreatedAt))
+        {
+            var (lt, lcss) = Ui.LeaveSt(l.Status);
+            <tr><td class="small">@Ui.Leave(l.Type)</td><td class="small">@l.FromDate.ToString("dd/MM") – @l.ToDate.ToString("dd/MM") (@l.Days ngày)</td><td class="small text-muted">@l.Reason</td><td><span class="badge bg-@lcss">@lt</span></td></tr>
+        }
+        @if (Model.Leaves.Count == 0) { <tr><td class="text-muted small">Chưa có.</td></tr> }
+        </tbody></table>
+    </div></div></div>
+    <div class="col-lg-5"><div class="card"><div class="card-body">
+        <h6 class="fw-bold mb-3">Gửi đơn nghỉ phép</h6>
+        <form asp-action="FileLeave" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" />
+            <div class="mb-2"><label class="form-label small text-muted">Loại</label>
+                <select name="type" class="form-select">@foreach (LeaveType t in Enum.GetValues(typeof(LeaveType))) { <option value="@((int)t)">@Ui.Leave(t)</option> }</select></div>
+            <div class="row g-2 mb-2">
+                <div class="col-6"><input name="fromDate" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></div>
+                <div class="col-6"><input name="toDate" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></div>
+            </div>
+            <div class="mb-3"><input name="reason" class="form-control" placeholder="Lý do" /></div>
+            <button class="btn btn-primary w-100"><i class="bi bi-send me-1"></i>Gửi đơn</button>
+        </form>
+    </div></div></div>
+</div>

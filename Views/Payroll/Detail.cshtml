@@ -1,0 +1,25 @@
+@model PayrollRun
+@{ ViewData["Title"] = $"Bảng lương {Model.Period}"; }
+<div class="card"><div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h5 class="fw-bold mb-0">Kỳ @Model.Period @if (Model.Closed) { <span class="badge bg-secondary">Đã chốt</span> } else { <span class="badge bg-warning text-dark">Nháp</span> }</h5>
+            <div class="text-muted small">@Model.Lines.Count nhân viên · Tổng chi <b>@Model.Total.ToString("N0")đ</b></div>
+        </div>
+        @if (!Model.Closed)
+        {
+            <form asp-action="Close" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Id" /><button class="btn btn-primary"><i class="bi bi-lock me-1"></i>Chốt kỳ lương</button></form>
+        }
+    </div>
+    <table class="table table-sm align-middle">
+        <thead><tr><th>Nhân viên</th><th class="text-end">Lương CB</th><th class="text-end">Phụ cấp</th><th class="text-end">Khấu trừ</th><th class="text-end">Thực lĩnh</th></tr></thead>
+        <tbody>
+        @foreach (var l in Model.Lines)
+        {
+            <tr><td>@l.EmployeeName</td><td class="text-end">@l.BaseSalary.ToString("N0")</td><td class="text-end text-success">@l.Allowance.ToString("N0")</td><td class="text-end text-danger">@l.Deduction.ToString("N0")</td><td class="text-end fw-semibold">@l.Net.ToString("N0")</td></tr>
+        }
+        </tbody>
+        <tfoot><tr class="fw-bold"><td>Tổng</td><td class="text-end">@Model.Lines.Sum(x=>x.BaseSalary).ToString("N0")</td><td class="text-end">@Model.Lines.Sum(x=>x.Allowance).ToString("N0")</td><td class="text-end">@Model.Lines.Sum(x=>x.Deduction).ToString("N0")</td><td class="text-end">@Model.Total.ToString("N0")</td></tr></tfoot>
+    </table>
+    <a href="/Payroll" class="btn btn-outline-secondary btn-sm">← Danh sách</a>
+</div></div>

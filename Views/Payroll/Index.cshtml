@@ -1,0 +1,28 @@
+@model List<PayrollRun>
+@{ ViewData["Title"] = "Bảng lương"; }
+<div class="row g-3">
+    <div class="col-lg-8"><div class="card"><div class="card-body">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Kỳ lương</th><th class="text-center">Số dòng</th><th class="text-end">Tổng chi</th><th>Trạng thái</th></tr></thead>
+            <tbody>
+            @foreach (var p in Model)
+            {
+                <tr style="cursor:pointer" onclick="location.href='/Payroll/Detail/@p.Id'">
+                    <td class="fw-semibold">@p.Period</td><td class="text-center">@p.Lines.Count</td>
+                    <td class="text-end">@p.Total.ToString("N0")đ</td>
+                    <td>@if (p.Closed) { <span class="badge bg-secondary">Đã chốt</span> } else { <span class="badge bg-warning text-dark">Nháp</span> }</td>
+                </tr>
+            }
+            @if (Model.Count == 0) { <tr><td colspan="4" class="text-center text-muted py-4">Chưa có kỳ lương.</td></tr> }
+            </tbody>
+        </table>
+    </div></div></div>
+    <div class="col-lg-4"><div class="card"><div class="card-body">
+        <h6 class="fw-bold mb-3">Chạy bảng lương</h6>
+        <form asp-action="Run" method="post">@Html.AntiForgeryToken()
+            <div class="mb-2"><label class="form-label small text-muted">Kỳ (YYYY-MM)</label><input name="period" value="@DateTime.Today.ToString("yyyy-MM")" class="form-control" required /></div>
+            <button class="btn btn-primary w-100"><i class="bi bi-play-fill me-1"></i>Tính lương</button>
+        </form>
+        <div class="small text-muted mt-3">Khấu trừ BHXH 10.5% + trừ ngày nghỉ không lương trong kỳ.</div>
+    </div></div></div>
+</div>
