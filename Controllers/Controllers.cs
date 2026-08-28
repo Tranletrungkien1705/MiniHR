@@ -6,9 +6,14 @@ using MiniHR.Services;
 
 namespace MiniHR.Controllers;
 
-public class HomeController(IHrService svc) : Controller
+public class HomeController : Controller
 {
-    public async Task<IActionResult> Index() { ViewBag.Dash = await svc.DashboardAsync(); return View(); }
+    public IActionResult Index() => Redirect("/index.html");   // SPA React ở "/"
+}
+
+public class LegacyController(IHrService svc) : Controller
+{
+    public async Task<IActionResult> Index() { ViewBag.Dash = await svc.DashboardAsync(); return View("~/Views/Home/Index.cshtml"); }
 }
 
 public class DeptController(IHrService svc) : Controller
