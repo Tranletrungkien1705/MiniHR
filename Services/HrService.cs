@@ -22,6 +22,11 @@ public interface IHrService
     Task<(bool ok, string msg, int id)> RunPayrollAsync(string period);
     Task ClosePayrollAsync(int id);
     Task<HrDash> DashboardAsync();
+    // Chấm công
+    Task<List<Attendance>> AttendancesAsync(string? period);
+    Task<(bool ok, string msg)> CheckInAsync(int employeeId);
+    Task<(bool ok, string msg)> CheckOutAsync(int employeeId);
+    Task<(int present, int late, int absent)> AttendanceSummaryAsync(string period);
 }
 
 public class HrService(AppDbContext db) : IHrService
@@ -87,13 +92,16 @@ public class HrService(AppDbContext db) : IHrService
         // Nghỉ không lương đã duyệt có ngày bắt đầu trong kỳ.
         var unpaidLeaves = await db.Leaves.Where(l => l.Status == LeaveStatus.Approved && l.Type == LeaveType.Unpaid
                 && l.FromDate >= monthStart && l.FromDate < monthEnd).ToListAsync();
+        // Chấm công trong kỳ: đếm ngày vắng (Absent) để trừ lương theo công thực tế.
+        var att = await db.Attendances.Where(a => a.WorkDate >= monthStart && a.WorkDate < monthEnd).ToListAsync();
         var run = new PayrollRun { Period = period };
         foreach (var e in emps)
         {
-            var days = unpaidLeaves.Where(l => l.EmployeeId == e.Id).Sum(x => x.Days);
+            var unpaidDays = unpaidLeaves.Where(l => l.EmployeeId == e.Id).Sum(x => x.Days);
+            var absentDays = att.Count(a => a.EmployeeId == e.Id && a.Status == AttendanceStatus.Absent);
             var perDay = e.BaseSalary / 26m;
             run.Lines.Add(new PayrollLine { EmployeeId = e.Id, EmployeeName = e.FullName, BaseSalary = e.BaseSalary,
-                Allowance = 0, Deduction = Math.Round(perDay * days + e.BaseSalary * 0.105m, 0) });   // 10.5% BHXH/BHYT/BHTN
+                Allowance = 0, Deduction = Math.Round(perDay * (unpaidDays + absentDays) + e.BaseSalary * 0.105m, 0) });   // nghỉ KL + vắng + 10.5% BH
         }
         db.PayrollRuns.Add(run);
         await db.SaveChangesAsync();
@@ -104,6 +112,45 @@ public class HrService(AppDbContext db) : IHrService
     {
         var p = await db.PayrollRuns.FirstOrDefaultAsync(x => x.Id == id) ?? throw new KeyNotFoundException();
         p.Closed = true; await db.SaveChangesAsync();
+    }
+
+    // ── Chấm công ──
+    public async Task<List<Attendance>> AttendancesAsync(string? period)
+    {
+        var q = db.Attendances.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(period) && DateTime.TryParseExact(period + "-01", "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var m))
+            q = q.Where(a => a.WorkDate >= m && a.WorkDate < m.AddMonths(1));
+        return await q.OrderByDescending(a => a.WorkDate).ThenBy(a => a.EmployeeName).Take(500).ToListAsync();
+    }
+
+    public async Task<(bool ok, string msg)> CheckInAsync(int employeeId)
+    {
+        var e = await db.Employees.FirstOrDefaultAsync(x => x.Id == employeeId);
+        if (e == null) return (false, "Không tìm thấy nhân viên.");
+        var today = DateTime.Today;
+        var a = await db.Attendances.FirstOrDefaultAsync(x => x.EmployeeId == employeeId && x.WorkDate == today);
+        if (a != null && a.CheckIn != null) return (false, $"{e.FullName} đã chấm vào lúc {a.CheckIn:HH:mm}.");
+        var now = DateTime.Now;
+        var late = now.TimeOfDay > new TimeSpan(8, 30, 0);   // vào sau 8:30 = đi muộn
+        if (a == null) { a = new Attendance { EmployeeId = employeeId, EmployeeName = e.FullName, WorkDate = today }; db.Attendances.Add(a); }
+        a.CheckIn = now; a.Status = late ? AttendanceStatus.Late : AttendanceStatus.Present;
+        await db.SaveChangesAsync();
+        return (true, $"{e.FullName} chấm vào {now:HH:mm}" + (late ? " (đi muộn)" : "") + ".");
+    }
+
+    public async Task<(bool ok, string msg)> CheckOutAsync(int employeeId)
+    {
+        var today = DateTime.Today;
+        var a = await db.Attendances.FirstOrDefaultAsync(x => x.EmployeeId == employeeId && x.WorkDate == today);
+        if (a?.CheckIn == null) return (false, "Chưa chấm vào.");
+        a.CheckOut = DateTime.Now; await db.SaveChangesAsync();
+        return (true, $"Chấm ra {a.CheckOut:HH:mm} — {a.WorkHours}h.");
+    }
+
+    public async Task<(int present, int late, int absent)> AttendanceSummaryAsync(string period)
+    {
+        var list = await AttendancesAsync(period);
+        return (list.Count(a => a.Status == AttendanceStatus.Present), list.Count(a => a.Status == AttendanceStatus.Late), list.Count(a => a.Status == AttendanceStatus.Absent));
     }
 
     public async Task<HrDash> DashboardAsync()

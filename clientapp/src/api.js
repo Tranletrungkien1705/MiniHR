@@ -20,7 +20,11 @@ export const api = {
   approve: (id, approve) => req(`/leaves/${id}/approve`, { method: 'POST', body: { approve } }),
   payrolls: () => req('/payrolls'),
   payroll: (id) => req(`/payrolls/${id}`),
-  runPayroll: (period) => req('/payrolls', { method: 'POST', body: { period } })
+  runPayroll: (period) => req('/payrolls', { method: 'POST', body: { period } }),
+  attendances: (period) => req(`/attendances${period ? `?period=${period}` : ''}`),
+  attSummary: (period) => req(`/attendance-summary${period ? `?period=${period}` : ''}`),
+  checkIn: (id) => req(`/attendances/${id}/checkin`, { method: 'POST' }),
+  checkOut: (id) => req(`/attendances/${id}/checkout`, { method: 'POST' })
 }
 export const fmtMoney = (n) => (n ?? 0).toLocaleString('vi-VN') + 'đ'
 export const fmtDate = (s) => s ? new Date(s).toLocaleDateString('vi-VN') : '—'

@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<LeaveRequest> Leaves => Set<LeaveRequest>();
     public DbSet<PayrollRun> PayrollRuns => Set<PayrollRun>();
     public DbSet<PayrollLine> PayrollLines => Set<PayrollLine>();
+    public DbSet<Attendance> Attendances => Set<Attendance>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -37,6 +38,12 @@ public class AppDbContext : DbContext
         {
             e.HasIndex(x => new { x.OrgId, x.Period }).IsUnique();
             e.Ignore(x => x.Total);
+            e.HasQueryFilter(x => x.OrgId == _orgId);
+        });
+        b.Entity<Attendance>(e =>
+        {
+            e.Ignore(x => x.WorkHours);
+            e.HasIndex(x => new { x.OrgId, x.EmployeeId, x.WorkDate });
             e.HasQueryFilter(x => x.OrgId == _orgId);
         });
         b.Entity<PayrollLine>(e =>

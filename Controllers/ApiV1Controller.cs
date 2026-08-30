@@ -127,6 +127,23 @@ public class ApiV1Controller(IHrService svc, ICache cache, ITenantContext tenant
         var (ok, msg, id) = await svc.RunPayrollAsync(r.Period ?? DateTime.Today.ToString("yyyy-MM"));
         return ok ? Ok(new { id }) : BadRequest(new { error = msg });
     }
+
+    // ── Chấm công ──
+    [HttpGet("attendances")]
+    public async Task<IActionResult> Attendances([FromQuery] string? period)
+        => Ok((await svc.AttendancesAsync(period)).Select(a => new { a.Id, a.EmployeeId, a.EmployeeName, workDate = a.WorkDate.ToString("yyyy-MM-dd"), checkIn = a.CheckIn, checkOut = a.CheckOut, status = (int)a.Status, workHours = a.WorkHours, a.Note }));
+
+    [HttpGet("attendance-summary")]
+    public async Task<IActionResult> AttendanceSummary([FromQuery] string? period)
+    { var (p, l, ab) = await svc.AttendanceSummaryAsync(period ?? DateTime.Today.ToString("yyyy-MM")); return Ok(new { present = p, late = l, absent = ab }); }
+
+    [HttpPost("attendances/{employeeId:int}/checkin")]
+    public async Task<IActionResult> CheckIn(int employeeId)
+    { var (ok, msg) = await svc.CheckInAsync(employeeId); await cache.RemoveByPrefixAsync("hr:"); return ok ? Ok(new { ok, msg }) : BadRequest(new { ok, error = msg }); }
+
+    [HttpPost("attendances/{employeeId:int}/checkout")]
+    public async Task<IActionResult> CheckOut(int employeeId)
+    { var (ok, msg) = await svc.CheckOutAsync(employeeId); return ok ? Ok(new { ok, msg }) : BadRequest(new { ok, error = msg }); }
 }
 
 public record DashDto(int Headcount, int OnLeave, int PendingLeaves, decimal PayrollMonth, List<ByDeptDto> ByDept);

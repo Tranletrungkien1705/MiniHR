@@ -21,7 +21,7 @@ function Layout() {
     <>
       <nav className="nav"><span className="brand">👥 MiniHR</span>
         <NavLink to="/" end>Tổng quan</NavLink><NavLink to="/employees">Nhân viên</NavLink>
-        <NavLink to="/leaves">Nghỉ phép</NavLink><NavLink to="/payrolls">Bảng lương</NavLink><NavLink to="/departments">Phòng ban</NavLink></nav>
+        <NavLink to="/attendance">Chấm công</NavLink><NavLink to="/leaves">Nghỉ phép</NavLink><NavLink to="/payrolls">Bảng lương</NavLink><NavLink to="/departments">Phòng ban</NavLink></nav>
       <div className="wrap"><Outlet /></div>
     </>
   )
@@ -212,10 +212,46 @@ export default function App() {
       <Route path="/" element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="employees" element={<Employees />} />
+        <Route path="attendance" element={<Attendance />} />
         <Route path="leaves" element={<Leaves />} />
         <Route path="payrolls" element={<Payrolls />} />
         <Route path="departments" element={<Departments />} />
       </Route>
     </Routes>
+  )
+}
+
+function Attendance() {
+  const [emps, setEmps] = useState([]); const [att, setAtt] = useState([]); const [sum, setSum] = useState(null); const [msg, setMsg] = useState(null)
+  const period = new Date().toISOString().slice(0, 7)
+  const load = () => { api.employees().then(r => setEmps(r.data)); api.attendances(period).then(r => setAtt(r.data)); api.attSummary(period).then(r => setSum(r.data)) }
+  useEffect(() => { load() }, [])
+  const today = new Date().toISOString().slice(0, 10)
+  const todayOf = (id) => att.find(a => a.employeeId === id && a.workDate === today)
+  const ci = async (id) => { try { const r = await api.checkIn(id); setMsg(r.data.msg); load() } catch (e) { setMsg('❌ ' + e.message) } }
+  const co = async (id) => { try { const r = await api.checkOut(id); setMsg(r.data.msg); load() } catch (e) { setMsg('❌ ' + e.message) } }
+  const ST = ['Đúng giờ', 'Đi muộn', 'Vắng', 'Nghỉ phép']
+  const hm = (s) => s ? new Date(s).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—'
+  return (
+    <>
+      <div className="toolbar"><h1 style={{ margin: 0, flex: 1 }}>Chấm công — {period}</h1></div>
+      {sum && <div className="grid kpis" style={{ marginBottom: 14 }}>
+        <div className="kpi"><div className="v">{sum.present}</div><div className="l">Đúng giờ</div></div>
+        <div className="kpi"><div className="v" style={{ color: 'var(--warning,#f59e0b)' }}>{sum.late}</div><div className="l">Đi muộn</div></div>
+        <div className="kpi"><div className="v" style={{ color: 'var(--danger,#dc2626)' }}>{sum.absent}</div><div className="l">Vắng</div></div>
+      </div>}
+      {msg && <div className="card" style={{ padding: '10px 14px', marginBottom: 10, fontSize: 13 }}>{msg}</div>}
+      <div className="card" style={{ padding: 0, overflow: 'auto' }}>
+        <table><thead><tr><th>Nhân viên</th><th>Vào</th><th>Ra</th><th>Giờ công</th><th>Trạng thái</th><th></th></tr></thead>
+          <tbody>{emps.map(e => { const a = todayOf(e.id); return (
+            <tr key={e.id}><td>{e.fullName}</td><td>{hm(a?.checkIn)}</td><td>{hm(a?.checkOut)}</td><td>{a?.workHours || '—'}</td>
+              <td>{a ? ST[a.status] : <span className="muted">chưa chấm</span>}</td>
+              <td>{!a?.checkIn ? <button className="btn sm" style={{ flex: 'none' }} onClick={() => ci(e.id)}>Chấm vào</button>
+                : !a?.checkOut ? <button className="btn gray sm" style={{ flex: 'none' }} onClick={() => co(e.id)}>Chấm ra</button>
+                : <span className="muted">✓</span>}</td></tr>) })}
+            {!emps.length && <tr><td colSpan={6} className="muted" style={{ padding: 16 }}>Chưa có nhân viên.</td></tr>}</tbody>
+        </table>
+      </div>
+    </>
   )
 }

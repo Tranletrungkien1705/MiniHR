@@ -80,3 +80,19 @@ public class PayrollLine : IOrgOwned
     public decimal Net => BaseSalary + Allowance - Deduction;
     public PayrollRun Run { get; set; } = null!;
 }
+
+public enum AttendanceStatus { Present = 0, Late = 1, Absent = 2, Leave = 3 }
+/// <summary>Chấm công (timesheet) — 1 dòng/nhân viên/ngày.</summary>
+public class Attendance : IOrgOwned
+{
+    public int Id { get; set; }
+    public Guid OrgId { get; set; }
+    public int EmployeeId { get; set; }
+    public string EmployeeName { get; set; } = "";
+    public DateTime WorkDate { get; set; } = DateTime.Today;
+    public DateTime? CheckIn { get; set; }
+    public DateTime? CheckOut { get; set; }
+    public AttendanceStatus Status { get; set; } = AttendanceStatus.Present;
+    public string? Note { get; set; }
+    public double WorkHours => (CheckIn != null && CheckOut != null) ? Math.Round((CheckOut.Value - CheckIn.Value).TotalHours, 1) : 0;
+}
