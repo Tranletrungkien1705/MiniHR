@@ -55,7 +55,57 @@ app.MapPost("/api/orgs/register", async (RegisterOrgDto dto, AppDbContext db) =>
     return Results.Ok(new { orgId = org.Id, apiKey = org.ApiKey });
 });
 
+// Import phòng ban thật (dedupe theo Code)
+app.MapPost("/api/import/departments", async (List<ImportDeptDto> rows, AppDbContext db, ITenantContext tc) =>
+{
+    if (rows == null || rows.Count == 0) return Results.BadRequest(new { error = "Không có dữ liệu." });
+    int added = 0, skipped = 0;
+    var orgId = tc.OrgId;
+    var existCodes = db.Departments.Where(d => d.OrgId == orgId).Select(d => d.Code).ToHashSet();
+    foreach (var row in rows)
+    {
+        if (string.IsNullOrWhiteSpace(row.Code)) { skipped++; continue; }
+        if (existCodes.Contains(row.Code.Trim())) { skipped++; continue; }
+        db.Departments.Add(new Department { OrgId = orgId, Code = row.Code.Trim(), Name = row.Name?.Trim() ?? row.Code.Trim() });
+        existCodes.Add(row.Code.Trim()); added++;
+    }
+    await db.SaveChangesAsync();
+    return Results.Ok(new { added, skipped, total = added + skipped });
+});
+
+// Import nhân viên thật từ Mst_SalesMan (dedupe theo Code)
+app.MapPost("/api/import/employees", async (List<ImportEmpDto> rows, AppDbContext db, ITenantContext tc) =>
+{
+    if (rows == null || rows.Count == 0) return Results.BadRequest(new { error = "Không có dữ liệu." });
+    int added = 0, skipped = 0;
+    var orgId = tc.OrgId;
+    var existCodes = db.Employees.Where(e => e.OrgId == orgId).Select(e => e.Code).ToHashSet();
+    foreach (var row in rows)
+    {
+        if (string.IsNullOrWhiteSpace(row.Code)) { skipped++; continue; }
+        if (existCodes.Contains(row.Code.Trim())) { skipped++; continue; }
+        int? deptId = null;
+        if (!string.IsNullOrWhiteSpace(row.DeptCode))
+        {
+            var dept = db.Departments.FirstOrDefault(d => d.OrgId == orgId && d.Code == row.DeptCode.Trim());
+            deptId = dept?.Id;
+        }
+        db.Employees.Add(new Employee
+        {
+            OrgId = orgId, Code = row.Code.Trim(), FullName = row.FullName?.Trim() ?? row.Code.Trim(),
+            Position = row.Position, DepartmentId = deptId, Phone = row.Phone, Email = row.Email,
+            JoinDate = row.JoinDate ?? DateTime.Today, BaseSalary = row.BaseSalary,
+            Status = EmpStatus.Active
+        });
+        existCodes.Add(row.Code.Trim()); added++;
+    }
+    await db.SaveChangesAsync();
+    return Results.Ok(new { added, skipped, total = added + skipped });
+});
+
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 app.Run();
 
 record RegisterOrgDto(string Name);
+record ImportDeptDto(string? Code, string? Name);
+record ImportEmpDto(string? Code, string? FullName, string? Position, string? DeptCode, string? Phone, string? Email, DateTime? JoinDate, decimal BaseSalary);
