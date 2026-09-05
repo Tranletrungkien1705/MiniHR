@@ -64,7 +64,11 @@ public class HrService(AppDbContext db) : IHrService
         var list = await q.ToListAsync();
         return list.OrderByDescending(l => l.CreatedAt).ToList();
     }
-    public async Task<int> FileLeaveAsync(LeaveRequest l) { db.Leaves.Add(l); await db.SaveChangesAsync(); return l.Id; }
+    public async Task<int> FileLeaveAsync(LeaveRequest l)
+    {
+        if (l.ToDate.Date < l.FromDate.Date) throw new InvalidOperationException("Ngày kết thúc phải sau ngày bắt đầu.");
+        db.Leaves.Add(l); await db.SaveChangesAsync(); return l.Id;
+    }
 
     public async Task<(bool ok, string msg)> ApproveLeaveAsync(int id, bool approve)
     {
@@ -72,7 +76,7 @@ public class HrService(AppDbContext db) : IHrService
         if (l == null) return (false, "Không tìm thấy đơn.");
         if (l.Status != LeaveStatus.Pending) return (false, "Đơn đã xử lý.");
         l.Status = approve ? LeaveStatus.Approved : LeaveStatus.Rejected;
-        if (approve && l.Type == LeaveType.Annual) l.Employee.AnnualLeaveDays = Math.Max(0, l.Employee.AnnualLeaveDays - l.Days);
+        if (approve && l.Type == LeaveType.Annual) l.Employee.AnnualLeaveDays = Math.Max(0, l.Employee.AnnualLeaveDays - Math.Max(0, l.Days));
         await db.SaveChangesAsync();
         return (true, approve ? "Đã duyệt nghỉ phép." : "Đã từ chối.");
     }
@@ -97,7 +101,7 @@ public class HrService(AppDbContext db) : IHrService
         var run = new PayrollRun { Period = period };
         foreach (var e in emps)
         {
-            var unpaidDays = unpaidLeaves.Where(l => l.EmployeeId == e.Id).Sum(x => x.Days);
+            var unpaidDays = unpaidLeaves.Where(l => l.EmployeeId == e.Id).Sum(x => Math.Max(0, x.Days));
             var absentDays = att.Count(a => a.EmployeeId == e.Id && a.Status == AttendanceStatus.Absent);
             var perDay = e.BaseSalary / 26m;
             run.Lines.Add(new PayrollLine { EmployeeId = e.Id, EmployeeName = e.FullName, BaseSalary = e.BaseSalary,

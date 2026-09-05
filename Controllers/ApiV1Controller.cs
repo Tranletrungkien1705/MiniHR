@@ -89,12 +89,17 @@ public class ApiV1Controller(IHrService svc, ICache cache, ITenantContext tenant
     [HttpPost("leaves")]
     public async Task<IActionResult> FileLeave([FromBody] LeaveReq r)
     {
-        var id = await svc.FileLeaveAsync(new LeaveRequest
+        int id;
+        try
         {
-            EmployeeId = r.EmployeeId, Type = (LeaveType)r.Type,
-            FromDate = r.FromDate == default ? DateTime.Today : r.FromDate,
-            ToDate = r.ToDate == default ? DateTime.Today : r.ToDate, Reason = r.Reason
-        });
+            id = await svc.FileLeaveAsync(new LeaveRequest
+            {
+                EmployeeId = r.EmployeeId, Type = (LeaveType)r.Type,
+                FromDate = r.FromDate == default ? DateTime.Today : r.FromDate,
+                ToDate = r.ToDate == default ? DateTime.Today : r.ToDate, Reason = r.Reason
+            });
+        }
+        catch (InvalidOperationException ex) { return BadRequest(new { error = ex.Message }); }
         return Ok(new { id });
     }
 

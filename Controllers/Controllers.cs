@@ -55,8 +55,13 @@ public class EmployeeController(IHrService svc) : Controller
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> FileLeave(int id, LeaveType type, DateTime fromDate, DateTime toDate, string? reason)
     {
-        await svc.FileLeaveAsync(new LeaveRequest { EmployeeId = id, Type = type, FromDate = fromDate == default ? DateTime.Today : fromDate, ToDate = toDate == default ? DateTime.Today : toDate, Reason = reason });
-        TempData["Success"] = "Đã gửi đơn nghỉ phép."; return RedirectToAction(nameof(Detail), new { id });
+        try
+        {
+            await svc.FileLeaveAsync(new LeaveRequest { EmployeeId = id, Type = type, FromDate = fromDate == default ? DateTime.Today : fromDate, ToDate = toDate == default ? DateTime.Today : toDate, Reason = reason });
+            TempData["Success"] = "Đã gửi đơn nghỉ phép.";
+        }
+        catch (InvalidOperationException ex) { TempData["Error"] = ex.Message; }
+        return RedirectToAction(nameof(Detail), new { id });
     }
 }
 
